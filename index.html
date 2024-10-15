@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>78 Пальцев здесь</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body{
+            background-color: #cccccc;
+            font-family: Arial, Helvetica, sans-serif;
+            font-weight: bolder;
+            font-size: 25px;
+            color: #213213;
+            /* text-align: center; */
+        }
+
+        h1 {
+            color: #313373;
+        }
+        div.main {
+            display: grid;
+            place-items: center;
+            width: 512px;
+            height: 200px;
+            border: 1px #313373 dashed;
+            padding: 15px;
+            margin-left: 50%;
+            align-content: center;
+            translate: -50%;
+        }
+        .noname {
+            padding: 10px;
+            border: 2px #cccccc dashed;
+            font-size: 12px;
+            color: #fff;
+            background-color: palevioletred;
+            
+        }
+    </style>
+    <script>
+        function check(){
+            if (document.getElementsByClassName("main")[0]){
+                const elemant = document.createElement("p");
+                elemant.textContent = 'Синтепоновые лошади расплескались';
+                elemant.className = 'noname'
+                console.log('работает')
+                document.body.appendChild(elemant)
+
+            }
+    }
+    </script>
+</head>
+<body onload="check()">
+    <div class="main">
+        <h1>Ну что, погнали?</h1>
+        <p>Щас вы всё узнаете )</p>
+    </div>
+</body>
+</html>
