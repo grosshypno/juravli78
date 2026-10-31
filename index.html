@@ -1,64 +1,1059 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>78 Пальцев здесь</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Halloween: Выбей Зубы Эго!</title>
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+  body, html { 
+    margin: 0; padding: 0; width: 100%; height: 100dvh; 
+    overflow: hidden; background: #06020c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #fff; 
+  }
+  #game-wrap { position: relative; width: 100vw; height: 100dvh; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
-        body{
-            background-color: #cccccc;
-            font-family: Arial, Helvetica, sans-serif;
-            font-weight: bolder;
-            font-size: 25px;
-            color: #213213;
-            /* text-align: center; */
-        }
+  /* ЭКРАН ЗАГРУЗКИ */
+  #loading-screen {
+    position: absolute; inset: 0; background: #06020c; z-index: 200;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .loader-pumpkin { font-size: 54px; animation: bounce 1.2s infinite alternate ease-in-out; }
+  .loader-text { margin-top: 15px; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #ff5500; text-shadow: 0 0 10px #ff5500; }
+  .loader-bar-wrap { width: 200px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 15px; overflow: hidden; }
+  #loader-bar { width: 10%; height: 100%; background: #00ffcc; box-shadow: 0 0 8px #00ffcc; transition: width 0.2s; }
 
-        h1 {
-            color: #313373;
-        }
-        div.main {
-            display: grid;
-            place-items: center;
-            width: 512px;
-            height: 200px;
-            border: 1px #313373 dashed;
-            padding: 15px;
-            margin-left: 50%;
-            align-content: center;
-            translate: -50%;
-        }
-        .noname {
-            padding: 10px;
-            border: 2px #cccccc dashed;
-            font-size: 12px;
-            color: #fff;
-            background-color: palevioletred;
-            
-        }
-    </style>
-    <script>
-        function check(){
-            if (document.getElementsByClassName("main")[0]){
-                const elemant = document.createElement("p");
-                elemant.textContent = 'Синтепоновые лошади расплескались';
-                elemant.className = 'noname'
-                console.log('работает')
-                document.body.appendChild(elemant)
+  @keyframes bounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-16px) scale(1.08); } }
 
-            }
-    }
-    </script>
+  /* HUD */
+  #hud {
+    position: absolute; top: env(safe-area-inset-top, 10px); left: 0; width: 100%;
+    display: flex; justify-content: space-between; align-items: center; padding: 8px 14px;
+    font-size: 13px; font-weight: 800; pointer-events: none; z-index: 5;
+  }
+  .hud-pill { 
+    background: rgba(18, 10, 30, 0.85); padding: 6px 12px; border-radius: 20px; 
+    border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+  }
+  .hud-btn-icon {
+    pointer-events: auto; cursor: pointer; background: rgba(18, 10, 30, 0.85);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+
+  /* ИНВЕНТАРЬ */
+  #inventory-bar {
+    position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 5; pointer-events: auto;
+  }
+  .inv-slot {
+    width: 48px; height: 48px; background: rgba(22, 12, 38, 0.9); border: 2px solid #5a357a;
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+    overflow: hidden;
+  }
+  .inv-slot canvas { width: 36px; height: 36px; pointer-events: none; }
+  .inv-slot.selected { border-color: #00ffcc; box-shadow: 0 0 12px #00ffcc; transform: scale(1.12); }
+
+  #hack-btn {
+    position: absolute; top: calc(env(safe-area-inset-top, 10px) + 48px); right: 14px;
+    background: #ff0055; border: 2px solid #fff; color: #fff; padding: 8px 14px;
+    border-radius: 20px; font-weight: bold; font-size: 11px; cursor: pointer;
+    box-shadow: 0 0 12px #ff0055; z-index: 10;
+  }
+
+  /* МОДАЛКИ */
+  .modal {
+    display: none; position: absolute; inset: 0; background: rgba(5,2,10,0.92);
+    backdrop-filter: blur(6px); flex-direction: column; justify-content: center;
+    align-items: center; padding: 20px; text-align: center; z-index: 100;
+  }
+  .modal-box {
+    background: #160e26; border: 2px solid #00ffcc; padding: 20px; border-radius: 18px;
+    max-width: 360px; width: 94%; box-shadow: 0 0 25px rgba(0,255,204,0.3);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-box h2 { margin: 0 0 8px 0; color: #00ffcc; font-size: 20px; }
+  .modal-box input { 
+    width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #00ffcc; 
+    font-size: 16px; text-align: center; background: #07030e; color: #fff;
+  }
+  .btn { 
+    display: block; width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; 
+    font-weight: bold; font-size: 14px; text-decoration: none; border: none; cursor: pointer; 
+  }
+  .btn-boosty { background: #f15f2c; color: #fff; box-shadow: 0 0 15px rgba(241, 95, 44, 0.4); }
+  .btn-green { background: #00ffcc; color: #000; }
+  .btn-orange { background: #ffaa00; color: #000; }
+  .btn-pink { background: #ff0055; color: #fff; }
+
+  .candy-guide-item {
+    display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05);
+    padding: 8px 10px; border-radius: 10px; margin-bottom: 6px; text-align: left; font-size: 12px;
+  }
+  .candy-guide-item canvas { width: 32px; height: 32px; flex-shrink: 0; }
+  .candy-guide-desc b { color: #00ffcc; }
+</style>
 </head>
-<body onload="check()">
-    <div class="main">
-        <h1>Ну что, погнали?</h1>
-        <p>Щас вы всё узнаете )</p>
+<body>
+
+<div id="game-wrap">
+  <!-- ЭКРАН ЗАГРУЗКИ -->
+  <div id="loading-screen">
+    <div class="loader-pumpkin">🎃</div>
+    <div class="loader-text">ЗАГРУЗКА ЗУБОВ И СЛАДОСТЕЙ...</div>
+    <div class="loader-bar-wrap"><div id="loader-bar"></div></div>
+  </div>
+
+  <!-- АУДИО -->
+  <audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+  <audio id="snd-ai" src="ai.mp3" preload="auto"></audio>
+  <audio id="snd-oi" src="oi.mp3" preload="auto"></audio>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-pill">⏱ <span id="timer">0.0</span>с</div>
+    <div class="hud-pill" style="color: #ffaa00;">⭐ <span id="score-val">0</span></div>
+    <div class="hud-btn-icon" onclick="toggleMusic()" id="music-btn">🎵</div>
+    <div class="hud-pill">🦷 <span id="teeth-count">10</span></div>
+  </div>
+
+  <!-- ИНВЕНТАРЬ -->
+  <div id="inventory-bar">
+    <div class="inv-slot selected" id="slot-0" onclick="selectSlot(0)"><canvas id="sc-0" width="48" height="48"></canvas></div>
+    <div class="inv-slot" id="slot-1" onclick="selectSlot(1)"><canvas id="sc-1" width="48" height="48"></canvas></div>
+    <div class="inv-slot" id="slot-2" onclick="selectSlot(2)"><canvas id="sc-2" width="48" height="48"></canvas></div>
+    <div class="inv-slot" id="slot-3" onclick="selectSlot(3)"><canvas id="sc-3" width="48" height="48"></canvas></div>
+  </div>
+
+  <button id="hack-btn" onclick="openHackModal()">⚡ ВЗЛОМАТЬ</button>
+  <canvas id="canvas"></canvas>
+
+  <!-- ОБУЧЕНИЕ -->
+  <div id="tutorial-modal" class="modal">
+    <div class="modal-box" style="border-color: #ffaa00; box-shadow: 0 0 25px rgba(255,170,0,0.3);">
+      <h2 style="color: #ffaa00;">КАК ИГРАТЬ?</h2>
+      <p style="font-size: 13px; color: #ddd; margin: 0 0 10px 0; text-align: left;">
+        🎃 <b>Цель:</b> Выбей все 10 зубов у гигантского Эго, пока пасть открыта!<br>
+        🏹 <b>Стрельба:</b> Тяни рогатку вниз и отпускай. Тапай по слотам, чтобы менять сладость.
+      </p>
+
+      <div style="font-size: 12px; font-weight: 800; color: #ffaa00; text-align: left; margin: 6px 0;">АРСЕНАЛ СЛАДОСТЕЙ:</div>
+      
+      <div class="candy-guide-item">
+        <canvas id="guide-c0" width="48" height="48"></canvas>
+        <div class="candy-guide-desc"><b>Карамель:</b> Базовый точный выстрел (1 урон). Фея съедает её и застревает на 1.5 сек!</div>
+      </div>
+
+      <div class="candy-guide-item">
+        <canvas id="guide-c1" width="48" height="48"></canvas>
+        <div class="candy-guide-desc"><b>Челюстелом:</b> Сносит 2 урона! Фея не ест его, а замедляется на 15%. 3 удара камнем = мега-стан на 50%!</div>
+      </div>
+
+      <div class="candy-guide-item">
+        <canvas id="guide-c2" width="48" height="48"></canvas>
+        <div class="candy-guide-desc"><b>Чили-Леденец:</b> Сверхскоростной! Но если Фея поймает его — взбесится и ускорит полет в 2.2 раза.</div>
+      </div>
+
+      <div class="candy-guide-item">
+        <canvas id="guide-c3" width="48" height="48"></canvas>
+        <div class="candy-guide-desc"><b>Призрак:</b> Летит сквозь Фею прямо в зубы! Она бессильна его перехватить.</div>
+      </div>
+
+      <p style="font-size: 11px; color: #bbb; margin: 8px 0; text-align: left;">
+        ⚠️ <i>Не тапай по самой Фее (она разозлится)! Лови падающие сладости: если инвентарь полон, они дают очки.</i>
+      </p>
+
+      <button class="btn btn-green" onclick="startGame()">ПОНЯТНО, В БОЙ!</button>
     </div>
+  </div>
+
+  <!-- ВЗЛОМ (THREADS) -->
+  <div id="hack-modal" class="modal">
+    <div class="modal-box">
+      <h2>ЗАМОРОЗИТЬ ФЕЮ</h2>
+      <p style="font-size: 13px; color: #bbb;">Найди секретное слово в посте Threads и введи его сюда (одноразово!):</p>
+      <input type="text" id="cheat-input" placeholder="Кодовое слово">
+      <button class="btn btn-green" onclick="applyCheat()">ПРИМЕНИТЬ ЧИТ</button>
+      <a href="https://threads.net" target="_blank" class="btn btn-orange">🔍 Искать слово в Threads</a>
+      <button style="background:none; border:none; color:#777; margin-top:14px; padding:6px; cursor:pointer;" onclick="closeModals()">Отмена</button>
+    </div>
+  </div>
+
+  <!-- ФИНАЛ С BOOSTY -->
+  <div id="win-modal" class="modal">
+    <div class="modal-box" style="border-color: #ff0055; box-shadow: 0 0 30px rgba(255,0,85,0.4);">
+      <h2 style="color: #ff0055;">ЧЕЛЮСТЬ ВЫБИТА!</h2>
+      <p id="win-stats" style="font-size: 14px;"></p>
+      
+      <!-- КНОПКА BOOSTY -->
+      <a href="https://boosty.to/grosshypno" target="_blank" class="btn btn-boosty">🧡 Подписаться на Boosty</a>
+
+      <div id="diagnosis-box" style="background: rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; font-size: 12px; text-align: left; margin: 12px 0;"></div>
+      <a id="win-btn-primary" href="#" target="_blank" class="btn btn-pink">📖 Читать разбор</a>
+      <a id="win-btn-secondary" href="#" target="_blank" class="btn btn-orange">💬 Обсудить в соцсети</a>
+      <button class="btn" style="background:#333; color:#fff;" onclick="restartGame()">Реванш</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// 1. АУДИОСИСТЕМА
+// ==========================================
+let audioCtx = null;
+const bgm = document.getElementById('bgm');
+let musicStarted = false;
+let isMuted = false;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  
+  if (!musicStarted && !isMuted) {
+    bgm.volume = 0.35;
+    bgm.play().then(() => { musicStarted = true; }).catch(() => {});
+  }
+}
+
+function playCustomAudio(id) {
+  initAudio();
+  const snd = document.getElementById(id);
+  if (snd) {
+    snd.currentTime = 0;
+    snd.play().catch(() => {});
+  }
+}
+
+function toggleMusic() {
+  isMuted = !isMuted;
+  const btn = document.getElementById('music-btn');
+  if (isMuted) {
+    bgm.pause();
+    btn.innerText = '🔇';
+  } else {
+    bgm.play();
+    btn.innerText = '🎵';
+  }
+}
+
+function playTone(freq, type, duration, vol = 0.2) {
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+const SFX = {
+  shoot() {
+    initAudio();
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.16);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.16);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.16);
+  },
+  hit() {
+    playTone(180, 'triangle', 0.1, 0.4);
+    setTimeout(() => playTone(90, 'sawtooth', 0.12, 0.3), 20);
+  },
+  breakTooth() {
+    playTone(600, 'square', 0.08, 0.25);
+    setTimeout(() => playTone(950, 'triangle', 0.18, 0.3), 50);
+    setTimeout(() => playTone(1200, 'sine', 0.25, 0.25), 100);
+  },
+  eat() {
+    playTone(320, 'sine', 0.08, 0.3);
+    setTimeout(() => playTone(240, 'triangle', 0.09, 0.3), 90);
+    setTimeout(() => playTone(360, 'sine', 0.1, 0.3), 180);
+  },
+  enrage() {
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => playTone(400 + i * 150, 'sawtooth', 0.1, 0.2), i * 60);
+    }
+  },
+  regrow() {
+    [261, 329, 392, 523].forEach((f, i) => {
+      setTimeout(() => playTone(f, 'sine', 0.2, 0.25), i * 70);
+    });
+  }
+};
+
+// ==========================================
+// 2. БРОНЕБОЙНАЯ ЗАГРУЗКА (БЕЗ ЗАВИСАНИЙ)
+// ==========================================
+const sprites = {
+  head: new Image(),
+  fairy: new Image(),
+  candies: new Image(),
+  tooth: new Image(),
+  loaded: { head: false, fairy: false, candies: false, tooth: false }
+};
+
+let loadedCount = 0;
+const totalAssets = 4;
+let loaderFinished = false;
+
+function finishLoading() {
+  if (loaderFinished) return;
+  loaderFinished = true;
+  const loaderEl = document.getElementById('loading-screen');
+  if (loaderEl) loaderEl.style.display = 'none';
+  document.getElementById('tutorial-modal').style.display = 'flex';
+  renderTutorialSprites();
+  updateInventoryUI();
+}
+
+function assetLoaded() {
+  loadedCount++;
+  const bar = document.getElementById('loader-bar');
+  if (bar) bar.style.width = `${Math.min(100, (loadedCount / totalAssets) * 100)}%`;
+
+  if (loadedCount >= totalAssets) {
+    setTimeout(finishLoading, 200);
+  }
+}
+
+// Загрузчик с защитой от ошибок и кэша
+function setupSprite(key, src) {
+  sprites[key].onload = () => { sprites.loaded[key] = true; assetLoaded(); };
+  sprites[key].onerror = () => { sprites.loaded[key] = false; assetLoaded(); };
+  sprites[key].src = src;
+}
+
+setupSprite('head', 'head.png');
+setupSprite('fairy', 'fairy.png');
+setupSprite('candies', 'candies.png');
+setupSprite('tooth', 'tooth.png');
+
+// АВАРИЙНЫЙ ТАЙМЕР: Если кэш браузера заглючил, игра запустится через 1.2 сек в любом случае!
+setTimeout(finishLoading, 1200);
+
+function renderTutorialSprites() {
+  if (!sprites.loaded.candies) return;
+  const cw = sprites.candies.width / 4;
+  const ch = sprites.candies.height;
+
+  for (let i = 0; i < 4; i++) {
+    const c = document.getElementById(`guide-c${i}`);
+    if (c) {
+      const cx = c.getContext('2d');
+      cx.clearRect(0, 0, 48, 48);
+      cx.drawImage(sprites.candies, i * cw, 0, cw, ch, 4, 4, 40, 40);
+    }
+  }
+}
+
+// ==========================================
+// 3. КОНФИГУРАЦИЯ
+// ==========================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let PLAY_W, PLAY_LEFT, PLAY_RIGHT;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  PLAY_W = Math.min(W, 720);
+  PLAY_LEFT = (W - PLAY_W) / 2;
+  PLAY_RIGHT = PLAY_LEFT + PLAY_W;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const CANDY_TYPES = [
+  { id: 0, name: 'Карамель', weight: 1.0, speedMult: 1.0, damage: 1, special: 'none' },
+  { id: 1, name: 'Челюстелом', weight: 1.22, speedMult: 0.95, damage: 2, special: 'heavy' },
+  { id: 2, name: 'Чили-Леденец', weight: 0.85, speedMult: 1.35, damage: 1, special: 'chili' },
+  { id: 3, name: 'Призрак', weight: 0.9, speedMult: 1.1, damage: 1, special: 'ghost' }
+];
+
+let inventory = [0, 1, 2, 3];
+let selectedSlot = 0;
+let score = 0;
+
+let gameActive = false;
+let startTime = 0;
+let screenShake = 0;
+let fairyFrozenUntil = 0;
+
+const head = {
+  get x() { return W / 2; },
+  get y() { return Math.max(H * 0.22, 130); },
+  get radius() { return Math.min(PLAY_W * 0.38, 155); },
+  mouthOpen: 0,
+  timer: 0,
+  hitTimer: 0,
+  smugTimer: 0
+};
+
+let teeth = [];
+function initTeeth() {
+  teeth = [
+    { rx: -0.44, ry: -0.14, hp: 2, upper: true },
+    { rx: -0.22, ry: -0.21, hp: 2, upper: true },
+    { rx:  0.00, ry: -0.24, hp: 2, upper: true },
+    { rx:  0.22, ry: -0.21, hp: 2, upper: true },
+    { rx:  0.44, ry: -0.14, hp: 2, upper: true },
+
+    { rx: -0.40, ry:  0.22, hp: 2, upper: false },
+    { rx: -0.20, ry:  0.28, hp: 2, upper: false },
+    { rx:  0.00, ry:  0.31, hp: 2, upper: false },
+    { rx:  0.20, ry:  0.28, hp: 2, upper: false },
+    { rx:  0.40, ry:  0.22, hp: 2, upper: false }
+  ];
+}
+initTeeth();
+
+const fairy = {
+  x: W / 2,
+  baseY: H * 0.47,
+  y: H * 0.47,
+  dir: 1,
+  baseSpeed: 3.5,
+  radius: 30,
+  time: 0,
+  state: 'FLYING',
+  eatTimer: 0,
+  enragedUntil: 0,
+  tapAngryUntil: 0,
+  stoneSlowUntil: 0,
+  megaSlowUntil: 0,
+  stoneHits: 0
+};
+
+const slingshot = {
+  get x() { return W / 2; },
+  get y() { return W > 1000 ? H - 220 : H - 120; },
+  touching: false,
+  dragX: 0,
+  dragY: 0
+};
+
+let bullets = [];
+let fallingCandies = [];
+let particles = [];
+let floatingTexts = [];
+
+// ==========================================
+// 4. СТАРТ И УПРАВЛЕНИЕ
+// ==========================================
+function startGame() {
+  document.getElementById('tutorial-modal').style.display = 'none';
+  initAudio();
+  startTime = Date.now();
+  gameActive = true;
+}
+
+function selectSlot(idx) {
+  if (inventory[idx] !== undefined) {
+    selectedSlot = idx;
+    updateInventoryUI();
+  }
+}
+
+function updateInventoryUI() {
+  if (selectedSlot >= inventory.length) selectedSlot = Math.max(0, inventory.length - 1);
+
+  for (let i = 0; i < 4; i++) {
+    const slot = document.getElementById(`slot-${i}`);
+    slot.className = 'inv-slot' + (i === selectedSlot ? ' selected' : '');
+    const sc = document.getElementById(`sc-${i}`);
+    const sctx = sc.getContext('2d');
+    sctx.clearRect(0, 0, 48, 48);
+
+    if (inventory[i] !== undefined && sprites.loaded.candies) {
+      const typeId = inventory[i];
+      const cw = sprites.candies.width / 4;
+      const ch = sprites.candies.height;
+      sctx.drawImage(sprites.candies, typeId * cw, 0, cw, ch, 4, 4, 40, 40);
+    }
+  }
+}
+
+function getEventPos(e) {
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX, y: t.clientY };
+}
+
+function isUIElement(e) {
+  return e.target.closest('.modal') || e.target.closest('#hack-btn') || e.target.closest('#inventory-bar') || e.target.closest('#music-btn');
+}
+
+function spawnFloatingText(x, y, text, color = '#ffaa00') {
+  floatingTexts.push({ x, y, text, color, alpha: 1.0 });
+}
+
+function onTouchStart(e) {
+  initAudio();
+  if (isUIElement(e)) return;
+  if (!gameActive) return;
+  const p = getEventPos(e);
+
+  if (Math.hypot(p.x - fairy.x, p.y - fairy.y) < fairy.radius + 18) {
+    fairy.tapAngryUntil = Date.now() + 10000;
+    playCustomAudio('snd-ai');
+    spawnFloatingText(fairy.x, fairy.y - 20, 'АНГРИ! +20%', '#ff0055');
+    spawnDebris(fairy.x, fairy.y);
+    return;
+  }
+
+  for (let i = fallingCandies.length - 1; i >= 0; i--) {
+    let c = fallingCandies[i];
+    if (Math.hypot(p.x - c.x, p.y - c.y) < 48) {
+      if (inventory.length < 4) {
+        inventory.push(c.typeId);
+        updateInventoryUI();
+      } else {
+        score += 100;
+        document.getElementById('score-val').innerText = score;
+        spawnFloatingText(c.x, c.y, '+100 ОЧКОВ', '#00ffcc');
+        playTone(550, 'sine', 0.1, 0.3);
+      }
+      fallingCandies.splice(i, 1);
+      return;
+    }
+  }
+
+  const touchThreshold = W > 1000 ? H * 0.42 : H * 0.52;
+  if (p.y > touchThreshold && inventory.length > 0) {
+    slingshot.touching = true;
+    slingshot.dragX = p.x;
+    slingshot.dragY = p.y;
+    if (e.cancelable) e.preventDefault();
+  }
+}
+
+function onTouchMove(e) {
+  if (isUIElement(e)) return;
+  if (!slingshot.touching) return;
+  const p = getEventPos(e);
+  slingshot.dragX = p.x;
+  slingshot.dragY = p.y;
+  if (e.cancelable) e.preventDefault();
+}
+
+function onTouchEnd(e) {
+  if (isUIElement(e)) return;
+  if (!slingshot.touching) return;
+  slingshot.touching = false;
+
+  const dx = slingshot.x - slingshot.dragX;
+  const dy = slingshot.y - slingshot.dragY;
+  const dist = Math.hypot(dx, dy);
+
+  const isPulledDown = slingshot.dragY > slingshot.y + 28;
+
+  if (dist > 35 && isPulledDown && inventory.length > 0) {
+    const curType = CANDY_TYPES[inventory[selectedSlot]];
+    inventory.splice(selectedSlot, 1);
+    updateInventoryUI();
+
+    const power = Math.min(dist, 160) * 0.20 * curType.speedMult;
+    const angle = Math.atan2(dy, dx);
+
+    bullets.push({
+      x: slingshot.x,
+      y: slingshot.y,
+      vx: Math.cos(angle) * power,
+      vy: Math.sin(angle) * power,
+      type: curType,
+      radius: 16
+    });
+
+    SFX.shoot();
+  }
+}
+
+window.addEventListener('mousedown', onTouchStart);
+window.addEventListener('mousemove', onTouchMove);
+window.addEventListener('mouseup', onTouchEnd);
+window.addEventListener('touchstart', onTouchStart, { passive: false });
+window.addEventListener('touchmove', onTouchMove, { passive: false });
+window.addEventListener('touchend', onTouchEnd);
+
+setInterval(() => {
+  if (!gameActive || fallingCandies.length >= 3) return;
+  fallingCandies.push({
+    x: PLAY_LEFT + 50 + Math.random() * (PLAY_W - 100),
+    y: -30,
+    speed: 1.5 + Math.random() * 1.5,
+    typeId: Math.floor(Math.random() * CANDY_TYPES.length),
+    rot: 0
+  });
+}, 2400);
+
+// ==========================================
+// 5. ОБНОВЛЕНИЕ
+// ==========================================
+function update() {
+  head.timer += 0.038;
+  head.mouthOpen = (Math.sin(head.timer) + 1) / 2;
+  fairy.time += 0.06;
+
+  if (!gameActive) return;
+  const now = Date.now();
+  document.getElementById('timer').innerText = ((now - startTime) / 1000).toFixed(1);
+
+  if (screenShake > 0) screenShake *= 0.88;
+  if (head.hitTimer > 0) head.hitTimer--;
+  if (head.smugTimer > 0) head.smugTimer--;
+
+  const isFrozen = now < fairyFrozenUntil;
+  const isChiliEnraged = now < fairy.enragedUntil;
+  const isTapAngry = now < fairy.tapAngryUntil;
+  const isStoneSlow = now < fairy.stoneSlowUntil;
+  const isMegaSlow = now < fairy.megaSlowUntil;
+
+  const deadCount = teeth.filter(t => t.hp <= 0).length;
+  let speedMult = 1 + (deadCount * 0.12);
+
+  if (isChiliEnraged) speedMult *= 2.2;
+  if (isTapAngry) speedMult *= 1.20;
+  if (isStoneSlow) speedMult *= 0.85;
+  if (isMegaSlow) speedMult *= 0.50;
+
+  if (isFrozen) {
+    fairy.state = 'FROZEN';
+  } else if (fairy.state === 'EATING') {
+    fairy.eatTimer--;
+    if (fairy.eatTimer <= 0) fairy.state = 'FLYING';
+  } else {
+    fairy.state = (isChiliEnraged || isTapAngry) ? 'ENRAGED' : 'FLYING';
+
+    fairy.x += fairy.dir * fairy.baseSpeed * speedMult;
+    fairy.y = fairy.baseY + Math.sin(fairy.time * 2.3) * 35 + Math.cos(fairy.time * 0.8) * 15;
+
+    const minX = PLAY_LEFT + 45;
+    const maxX = PLAY_RIGHT - 45;
+
+    if (fairy.x >= maxX) {
+      fairy.x = maxX;
+      fairy.dir = -1;
+    } else if (fairy.x <= minX) {
+      fairy.x = minX;
+      fairy.dir = 1;
+    }
+  }
+
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    let b = bullets[i];
+    b.vy += 0.38 * b.type.weight;
+    b.x += b.vx;
+    b.y += b.vy;
+
+    if (fairy.state !== 'FROZEN' && fairy.state !== 'EATING' && b.type.special !== 'ghost') {
+      if (Math.hypot(b.x - fairy.x, b.y - fairy.y) < b.radius + fairy.radius) {
+        bullets.splice(i, 1);
+
+        if (b.type.special === 'heavy') {
+          fairy.stoneSlowUntil = Date.now() + 8000;
+          fairy.stoneHits++;
+          spawnFloatingText(fairy.x, fairy.y - 15, 'СТАН -15%', '#00ffcc');
+
+          if (fairy.stoneHits >= 3) {
+            fairy.stoneHits = 0;
+            fairy.megaSlowUntil = Date.now() + 20000;
+            playCustomAudio('snd-oi');
+            spawnFloatingText(fairy.x, fairy.y - 35, 'МЕГА-СТАН -50%!', '#ff0055');
+          } else {
+            SFX.hit();
+          }
+          spawnDebris(fairy.x, fairy.y);
+          continue;
+        }
+
+        if (b.type.special === 'chili') {
+          fairy.enragedUntil = Date.now() + 6000;
+          fairy.state = 'ENRAGED';
+          SFX.enrage();
+          continue;
+        }
+
+        fairy.state = 'EATING';
+        fairy.eatTimer = 85;
+        SFX.eat();
+        continue;
+      }
+    }
+
+    if (head.mouthOpen > 0.35) {
+      let hit = false;
+      const R = head.radius;
+
+      teeth.forEach(t => {
+        if (t.hp <= 0) return;
+        const tx = head.x + (t.rx * R);
+        const ty = head.y + (t.ry * R);
+
+        if (Math.hypot(b.x - tx, b.y - ty) < b.radius + (R * 0.14)) {
+          t.hp -= b.type.damage;
+          hit = true;
+          if (t.hp <= 0) {
+            score += 250;
+            document.getElementById('score-val').innerText = score;
+            spawnFloatingText(tx, ty, '+250', '#ffffff');
+            SFX.breakTooth();
+            spawnDebris(tx, ty);
+          } else {
+            SFX.hit();
+          }
+        }
+      });
+
+      if (hit) {
+        bullets.splice(i, 1);
+        head.hitTimer = 16;
+        screenShake = 16;
+        checkWinCondition();
+        continue;
+      }
+    }
+
+    if (b.y > H + 50 || b.x < -50 || b.x > W + 50) {
+      bullets.splice(i, 1);
+      growBackTooth();
+    }
+  }
+
+  for (let i = fallingCandies.length - 1; i >= 0; i--) {
+    let c = fallingCandies[i];
+    c.y += c.speed;
+    c.rot += 0.02;
+    if (c.y > H + 40) fallingCandies.splice(i, 1);
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.alpha -= 0.03;
+    if (p.alpha <= 0) particles.splice(i, 1);
+  }
+
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    let ft = floatingTexts[i];
+    ft.y -= 1.2;
+    ft.alpha -= 0.025;
+    if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+  }
+
+  document.getElementById('teeth-count').innerText = teeth.filter(t => t.hp > 0).length;
+}
+
+function spawnDebris(x, y) {
+  for (let i = 0; i < 7; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 1) * 8,
+      size: 4 + Math.random() * 6,
+      alpha: 1
+    });
+  }
+}
+
+function growBackTooth() {
+  const damaged = teeth.filter(t => t.hp < 2);
+  if (damaged.length > 0) {
+    const t = damaged[Math.floor(Math.random() * damaged.length)];
+    t.hp = 2;
+    head.smugTimer = 25;
+    SFX.regrow();
+  }
+}
+
+const DIAGNOSES = [
+  {
+    title: "Агрессивный Прокрастинатор",
+    desc: "Ты тянешь до крайнего срока, а затем бросаешься вперед на морально-волевых. В жизни это путь к выгоранию.",
+    pLink: "https://dzen.ru?utm_source=game_diag1", pText: "📖 Читать статью в Дзене",
+    sLink: "https://vk.com?utm_source=game_diag1", sText: "💬 Обсудить в VK"
+  },
+  {
+    title: "Хронический Гиперконтролер",
+    desc: "Фея в твоей голове панически боится ошибок. Ты тратишь колоссальный ресурс на контроль вместо действий.",
+    pLink: "https://vk.com?utm_source=game_diag2", pText: "📖 Читать разбор в VK",
+    sLink: "https://threads.net?utm_source=game_diag2", sText: "🔍 Наш Threads"
+  },
+  {
+    title: "Иллюзорный Перфекционист",
+    desc: "Ты выжидаешь 'идеальный момент', пока зубы страхов отрастают заново. Узнай, как разрубить этот узел.",
+    pLink: "https://dzen.ru?utm_source=game_diag3", pText: "📖 Читать в Дзене",
+    sLink: "https://vk.com?utm_source=game_diag3", sText: "💬 Вступить в движ"
+  }
+];
+
+function checkWinCondition() {
+  if (teeth.every(t => t.hp <= 0)) {
+    gameActive = false;
+    setTimeout(() => {
+      document.getElementById('win-stats').innerHTML = 
+        `⏱ Время разгрома: <b>${((Date.now() - startTime)/1000).toFixed(1)} сек</b> | Очки: <b>${score}</b>`;
+      
+      const diag = DIAGNOSES[Math.floor(Math.random() * DIAGNOSES.length)];
+      document.getElementById('diagnosis-box').innerHTML = 
+        `🧠 <b>Диагноз: ${diag.title}</b><br>${diag.desc}`;
+      
+      const pBtn = document.getElementById('win-btn-primary');
+      pBtn.href = diag.pLink;
+      pBtn.innerText = diag.pText;
+
+      const sBtn = document.getElementById('win-btn-secondary');
+      sBtn.href = diag.sLink;
+      sBtn.innerText = diag.sText;
+
+      document.getElementById('win-modal').style.display = 'flex';
+    }, 450);
+  }
+}
+
+// ==========================================
+// 6. ОТРИСОВКА
+// ==========================================
+function draw() {
+  ctx.save();
+  if (screenShake > 0.5) {
+    ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+  }
+  ctx.clearRect(0, 0, W, H);
+
+  const R = head.radius;
+
+  // 1. ТЫКВА
+  ctx.save();
+  ctx.translate(head.x, head.y);
+
+  let frameIdx = 0;
+  if (head.hitTimer > 0) frameIdx = 2;
+  else if (head.mouthOpen > 0.35) frameIdx = 3;
+  else if (head.mouthOpen > 0.12) frameIdx = 1;
+  else frameIdx = 0;
+
+  if (sprites.loaded.head) {
+    const fw = sprites.head.width / 4;
+    const fh = sprites.head.height;
+    const dw = R * 2.3;
+    const dh = dw * (fh / fw);
+    ctx.drawImage(sprites.head, frameIdx * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh);
+  }
+
+  // 2. 10 ЗУБОВ
+  if (frameIdx === 3) {
+    teeth.forEach(t => {
+      if (t.hp <= 0) return;
+      const tx = t.rx * R;
+      const ty = t.ry * R;
+      const tSize = R * 0.22;
+
+      ctx.save();
+      ctx.translate(tx, ty);
+      if (t.upper) ctx.scale(1, -1);
+
+      if (sprites.loaded.tooth) {
+        const tw = sprites.tooth.width / 2;
+        const th = sprites.tooth.height;
+        const toothFrame = t.hp === 1 ? 1 : 0;
+        ctx.drawImage(sprites.tooth, toothFrame * tw, 0, tw, th, -tSize/2, -tSize/2, tSize, tSize);
+      }
+      ctx.restore();
+    });
+  }
+  ctx.restore();
+
+  // 3. ФЕЯ
+  ctx.save();
+  ctx.translate(fairy.x, fairy.y);
+  const breathe3D = 1 + Math.sin(fairy.time * 2.6) * 0.06;
+  ctx.scale(breathe3D, breathe3D);
+
+  if (sprites.loaded.fairy) {
+    const fw = sprites.fairy.width / 6;
+    const fh = sprites.fairy.height;
+    let fairyFrame = 0;
+
+    if (fairy.state === 'ENRAGED') {
+      fairyFrame = 5;
+    } else if (fairy.state === 'EATING') {
+      fairyFrame = 2 + (Math.floor(fairy.time * 6) % 3);
+    } else {
+      fairyFrame = (Math.floor(fairy.time * 8) % 2 === 0) ? 0 : 1;
+    }
+
+    const fSize = fairy.radius * 2.6;
+    ctx.drawImage(sprites.fairy, fairyFrame * fw, 0, fw, fh, -fSize/2, -fSize/2, fSize, fSize);
+  }
+  ctx.restore();
+
+  // 4. ПАДАЮЩИЕ СЛАДОСТИ
+  fallingCandies.forEach(c => {
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.rot);
+    drawCandy(c.typeId, 22);
+    ctx.strokeStyle = '#00ffcc';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // 5. СНАРЯДЫ
+  bullets.forEach(b => {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    drawCandy(b.type.id, b.radius);
+    ctx.restore();
+  });
+
+  // 6. ОСКОЛКИ
+  particles.forEach(p => {
+    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  });
+
+  // 7. ВСПЛЫВАЮЩИЙ ТЕКСТ
+  floatingTexts.forEach(ft => {
+    ctx.save();
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = ft.color;
+    ctx.globalAlpha = Math.max(0, ft.alpha);
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.restore();
+  });
+
+  // 8. РОГАТКА
+  const sx = slingshot.x, sy = slingshot.y;
+
+  ctx.strokeStyle = '#5a3018';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(sx, sy + 30);
+  ctx.lineTo(sx, sy + 5);
+  ctx.lineTo(sx - 18, sy - 15);
+  ctx.moveTo(sx, sy + 5);
+  ctx.lineTo(sx + 18, sy - 15);
+  ctx.stroke();
+
+  if (slingshot.touching && inventory.length > 0) {
+    const curType = CANDY_TYPES[inventory[selectedSlot]];
+    const dx = sx - slingshot.dragX;
+    const dy = sy - slingshot.dragY;
+    const dist = Math.hypot(dx, dy);
+    const power = Math.min(dist, 160) * 0.20 * curType.speedMult;
+    const angle = Math.atan2(dy, dx);
+
+    ctx.strokeStyle = '#ff0055';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(sx - 18, sy - 15);
+    ctx.lineTo(slingshot.dragX, slingshot.dragY);
+    ctx.moveTo(sx + 18, sy - 15);
+    ctx.lineTo(slingshot.dragX, slingshot.dragY);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(slingshot.dragX, slingshot.dragY);
+    drawCandy(curType.id, 14);
+    ctx.restore();
+
+    let simX = sx, simY = sy;
+    let simVx = Math.cos(angle) * power;
+    let simVy = Math.sin(angle) * power;
+
+    for (let step = 0; step < 14; step++) {
+      simVy += 0.38 * curType.weight;
+      simX += simVx;
+      simY += simVy;
+      if (step % 2 === 0) {
+        const fade = (1 - step / 14);
+        ctx.fillStyle = `rgba(0, 255, 204, ${fade * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(simX, simY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  ctx.restore();
+
+  update();
+  requestAnimationFrame(draw);
+}
+
+function drawCandy(id, radius) {
+  if (sprites.loaded.candies) {
+    const cw = sprites.candies.width / 4;
+    const ch = sprites.candies.height;
+    ctx.drawImage(sprites.candies, id * cw, 0, cw, ch, -radius, -radius, radius * 2, radius * 2);
+  }
+}
+
+requestAnimationFrame(draw);
+
+// ==========================================
+// 7. МОДАЛКИ И LOCALSTORAGE
+// ==========================================
+function openHackModal() { document.getElementById('hack-modal').style.display = 'flex'; }
+function closeModals() { document.getElementById('hack-modal').style.display = 'none'; }
+
+function applyCheat() {
+  const val = document.getElementById('cheat-input').value.trim().toLowerCase();
+  
+  let usedCheats = [];
+  try {
+    usedCheats = JSON.parse(localStorage.getItem('ego_used_cheats') || '[]');
+  } catch(e) {}
+
+  if (usedCheats.includes(val)) {
+    alert('⚠️ Этот чит-код уже был активирован ранее! Ищи новый код в свежих постах.');
+    return;
+  }
+
+  if (val === 'тыква' || val === 'фокус') {
+    usedCheats.push(val);
+    try {
+      localStorage.setItem('ego_used_cheats', JSON.stringify(usedCheats));
+    } catch(e) {}
+
+    fairyFrozenUntil = Date.now() + 10000;
+    alert('Чит активирован! Фея заморожена на 10 секунд.');
+    closeModals();
+  } else {
+    alert('Неверный код! Загляни в свежий пост Threads.');
+  }
+}
+
+function restartGame() {
+  document.getElementById('win-modal').style.display = 'none';
+  startTime = Date.now();
+  inventory = [0, 1, 2, 3];
+  selectedSlot = 0;
+  score = 0;
+  document.getElementById('score-val').innerText = score;
+  updateInventoryUI();
+  initTeeth();
+  bullets = [];
+  gameActive = true;
+}
+</script>
 </body>
 </html>
