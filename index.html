@@ -9,6 +9,7 @@
   body, html { 
     margin: 0; padding: 0; width: 100%; height: 100dvh; 
     overflow: hidden; background: #06020c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #fff; 
+    background-image: url('back.jpg');
   }
   #game-wrap { position: relative; width: 100vw; height: 100dvh; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
@@ -115,7 +116,7 @@
     <div class="hud-pill">⏱ <span id="timer">0.0</span>с</div>
     <div class="hud-pill" style="color: #ffaa00;">⭐ <span id="score-val">0</span></div>
     <div class="hud-btn-icon" onclick="toggleMusic()" id="music-btn">🎵</div>
-    <div class="hud-pill">🦷 <span id="teeth-count">10</span></div>
+    <div class="hud-pill">Зубов: <span id="teeth-count">10</span></div>
   </div>
 
   <!-- ИНВЕНТАРЬ -->
@@ -126,7 +127,7 @@
     <div class="inv-slot" id="slot-3" onclick="selectSlot(3)"><canvas id="sc-3" width="48" height="48"></canvas></div>
   </div>
 
-  <button id="hack-btn" onclick="openHackModal()">⚡ ВЗЛОМАТЬ</button>
+  <button id="hack-btn" onclick="openHackModal()">⚡ Томознуть фею</button>
   <canvas id="canvas"></canvas>
 
   <!-- ОБУЧЕНИЕ -->
@@ -134,25 +135,29 @@
     <div class="modal-box" style="border-color: #ffaa00; box-shadow: 0 0 25px rgba(255,170,0,0.3);">
       <h2 style="color: #ffaa00;">КАК ИГРАТЬ?</h2>
       <p style="font-size: 13px; color: #ddd; margin: 0 0 10px 0; text-align: left;">
-        🎃 <b>Цель:</b> Выбей все 10 зубов у гигантского Эго, пока пасть открыта!<br>
-        🏹 <b>Стрельба:</b> Тяни рогатку вниз и отпускай. Тапай по слотам, чтобы менять сладость.
+        🎃 <b>Цель:</b> Выбей все 10 зубов у гигантского злого эго, пока пасть открыта!<br>
+        🏹 <b>Стрельба:</b> Собирай конфеты. Тяни рогатку вниз и отпускай. <br>
+        🎁 <b>Приз:</b> Делай скрин победного окна и пости в комент. Лучший получит приз.<br>
+        ✖️ За промахи зубы восстанавливаются.
+        🍬 Лишние пойманные конфеты превращаются в дополнительные очки.
+        ⚠️ Не тапай по самой Фее (она разозлится)!
       </p>
 
       <div style="font-size: 12px; font-weight: 800; color: #ffaa00; text-align: left; margin: 6px 0;">АРСЕНАЛ СЛАДОСТЕЙ:</div>
       
       <div class="candy-guide-item">
         <canvas id="guide-c0" width="48" height="48"></canvas>
-        <div class="candy-guide-desc"><b>Карамель:</b> Базовый точный выстрел (1 урон). Фея съедает её и застревает на 1.5 сек!</div>
+        <div class="candy-guide-desc"><b>Карамель:</b> Базовый выстрел (1 урон). Фея съедает её и застревает на 1.5 сек!</div>
       </div>
 
       <div class="candy-guide-item">
         <canvas id="guide-c1" width="48" height="48"></canvas>
-        <div class="candy-guide-desc"><b>Челюстелом:</b> Сносит 2 урона! Фея не ест его, а замедляется на 15%. 3 удара камнем = мега-стан на 50%!</div>
+        <div class="candy-guide-desc"><b>Челюстелом:</b> Сносит 2 урона! Фея замедляется на 15%. 3 попадания камнем замедление на 50%!</div>
       </div>
 
       <div class="candy-guide-item">
         <canvas id="guide-c2" width="48" height="48"></canvas>
-        <div class="candy-guide-desc"><b>Чили-Леденец:</b> Сверхскоростной! Но если Фея поймает его — взбесится и ускорит полет в 2.2 раза.</div>
+        <div class="candy-guide-desc"><b>Чили-Леденец:</b> Сверхскоростной! Но если Фея поймает его — взбесится.</div>
       </div>
 
       <div class="candy-guide-item">
@@ -160,9 +165,7 @@
         <div class="candy-guide-desc"><b>Призрак:</b> Летит сквозь Фею прямо в зубы! Она бессильна его перехватить.</div>
       </div>
 
-      <p style="font-size: 11px; color: #bbb; margin: 8px 0; text-align: left;">
-        ⚠️ <i>Не тапай по самой Фее (она разозлится)! Лови падающие сладости: если инвентарь полон, они дают очки.</i>
-      </p>
+      
 
       <button class="btn btn-green" onclick="startGame()">ПОНЯТНО, В БОЙ!</button>
     </div>
@@ -172,9 +175,9 @@
   <div id="hack-modal" class="modal">
     <div class="modal-box">
       <h2>ЗАМОРОЗИТЬ ФЕЮ</h2>
-      <p style="font-size: 13px; color: #bbb;">Найди секретное слово в посте Threads и введи его сюда (одноразово!):</p>
+      <p style="font-size: 13px; color: #bbb;">Найди секретное слово в посте <a href="https://www.threads.com/@grosshypno">Threads</a>, на <a href="https://dzen.ru/gipnoz">Дзене</a> или <a href="https://vk.ru/gipnoz_izhevsk">ВКонтакте</a> и введи его сюда:</p>
       <input type="text" id="cheat-input" placeholder="Кодовое слово">
-      <button class="btn btn-green" onclick="applyCheat()">ПРИМЕНИТЬ ЧИТ</button>
+      <button class="btn btn-green" onclick="applyCheat()">Тормознуть фею</button>
       <a href="https://threads.net" target="_blank" class="btn btn-orange">🔍 Искать слово в Threads</a>
       <button style="background:none; border:none; color:#777; margin-top:14px; padding:6px; cursor:pointer;" onclick="closeModals()">Отмена</button>
     </div>
@@ -183,14 +186,14 @@
   <!-- ФИНАЛ С BOOSTY -->
   <div id="win-modal" class="modal">
     <div class="modal-box" style="border-color: #ff0055; box-shadow: 0 0 30px rgba(255,0,85,0.4);">
-      <h2 style="color: #ff0055;">ЧЕЛЮСТЬ ВЫБИТА!</h2>
+      <h2 style="color: #ff0055;">ЗУБЫ ВЫБИТЫ!</h2>
       <p id="win-stats" style="font-size: 14px;"></p>
       
       <!-- КНОПКА BOOSTY -->
       <a href="https://boosty.to/grosshypno" target="_blank" class="btn btn-boosty">🧡 Подписаться на Boosty</a>
 
       <div id="diagnosis-box" style="background: rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; font-size: 12px; text-align: left; margin: 12px 0;"></div>
-      <a id="win-btn-primary" href="#" target="_blank" class="btn btn-pink">📖 Читать разбор</a>
+      <a id="win-btn-primary" href="#" target="_blank" class="btn btn-pink">👉 Читать разбор</a>
       <a id="win-btn-secondary" href="#" target="_blank" class="btn btn-orange">💬 Обсудить в соцсети</a>
       <button class="btn" style="background:#333; color:#fff;" onclick="restartGame()">Реванш</button>
     </div>
@@ -408,16 +411,16 @@ let teeth = [];
 function initTeeth() {
   teeth = [
     { rx: -0.44, ry: -0.14, hp: 2, upper: true },
-    { rx: -0.22, ry: -0.21, hp: 2, upper: true },
-    { rx:  0.00, ry: -0.24, hp: 2, upper: true },
-    { rx:  0.22, ry: -0.21, hp: 2, upper: true },
-    { rx:  0.44, ry: -0.14, hp: 2, upper: true },
+    { rx: -0.2, ry: -0.25, hp: 2, upper: true },
+    { rx:  0.05, ry: -0.3, hp: 2, upper: true },
+    { rx:  0.3, ry: -0.24, hp: 2, upper: true },
+    { rx:  0.52, ry: -0.14, hp: 2, upper: true },
 
     { rx: -0.40, ry:  0.22, hp: 2, upper: false },
-    { rx: -0.20, ry:  0.28, hp: 2, upper: false },
-    { rx:  0.00, ry:  0.31, hp: 2, upper: false },
-    { rx:  0.20, ry:  0.28, hp: 2, upper: false },
-    { rx:  0.40, ry:  0.22, hp: 2, upper: false }
+    { rx: -0.16, ry:  0.28, hp: 2, upper: false },
+    { rx:  0.05, ry:  0.31, hp: 2, upper: false },
+    { rx:  0.27, ry:  0.28, hp: 2, upper: false },
+    { rx:  0.52, ry:  0.22, hp: 2, upper: false }
   ];
 }
 initTeeth();
@@ -782,20 +785,33 @@ const DIAGNOSES = [
   {
     title: "Агрессивный Прокрастинатор",
     desc: "Ты тянешь до крайнего срока, а затем бросаешься вперед на морально-волевых. В жизни это путь к выгоранию.",
-    pLink: "https://dzen.ru?utm_source=game_diag1", pText: "📖 Читать статью в Дзене",
-    sLink: "https://vk.com?utm_source=game_diag1", sText: "💬 Обсудить в VK"
+    pLink: "https://dzen.ru/a/at4er3adql3iM6dh?utm_source=game_diag1", pText: "👉 Читать статью в Дзене",
+    sLink: "https://vk.ru/gipnoz_izhevsk?w=wall-150809314_1562", sText: "💬 Обсудить в VK"
   },
   {
     title: "Хронический Гиперконтролер",
     desc: "Фея в твоей голове панически боится ошибок. Ты тратишь колоссальный ресурс на контроль вместо действий.",
-    pLink: "https://vk.com?utm_source=game_diag2", pText: "📖 Читать разбор в VK",
-    sLink: "https://threads.net?utm_source=game_diag2", sText: "🔍 Наш Threads"
+    pLink: "https://dzen.ru/a/auJJDd4UXz1JCvJX?utm_source=game_diag2", pText: "👉 Читать статью в Дзене",
+    sLink: "https://www.threads.com/@grosshypno/post/DfJe0pEDC3J", sText: "🔍 Наш Threads"
   },
   {
     title: "Иллюзорный Перфекционист",
     desc: "Ты выжидаешь 'идеальный момент', пока зубы страхов отрастают заново. Узнай, как разрубить этот узел.",
-    pLink: "https://dzen.ru?utm_source=game_diag3", pText: "📖 Читать в Дзене",
-    sLink: "https://vk.com?utm_source=game_diag3", sText: "💬 Вступить в движ"
+    pLink: "https://dzen.ru/a/atvh6GIeai6fgvWP?utm_source=game_diag3", pText: "👉 Читать в Дзене",
+    sLink: "https://vk.com/gipnoz_izhevsk", sText: "💬 Вступить в группу ВК"
+  }
+  ,
+  {
+    title: "Крутой чё",
+    desc: "И чтобы стать ещё круче загляни сюда и узнай ты ли это",
+    pLink: "https://dzen.ru/a/atChpNDbdTdk0slu?utm_source=game_diag3", pText: "👉 Читать в Дзене",
+    sLink: "https://vk.com/gipnoz_izhevsk", sText: "💬 Вступить в группу ВК"
+  },
+  {
+    title: "Как много страха, но ты страшнее )",
+    desc: "Узнай как можно переписать реакцию страха при помощи гипноза",
+    pLink: "https://dzen.ru/a/at93uJXnO2bSz9EL?utm_source=game_diag3", pText: "👉 Читать в Дзене",
+    sLink: "https://vk.com/gipnoz_izhevsk", sText: "💬 Вступить в группу ВК"
   }
 ];
 
@@ -1024,21 +1040,21 @@ function applyCheat() {
   } catch(e) {}
 
   if (usedCheats.includes(val)) {
-    alert('⚠️ Этот чит-код уже был активирован ранее! Ищи новый код в свежих постах.');
+    alert('⚠️ Этот код уже был активирован ранее! Ищи новый код в свежих постах.');
     return;
   }
 
-  if (val === 'тыква' || val === 'фокус') {
+  if (val === 'страх' || val === 'смерть' || val === 'гипноз' || val === 'муж' || val === 'СДВГ' || val === 'можно' || val === 'Гросс' || val === 'прокрастинация') {
     usedCheats.push(val);
     try {
       localStorage.setItem('ego_used_cheats', JSON.stringify(usedCheats));
     } catch(e) {}
 
     fairyFrozenUntil = Date.now() + 10000;
-    alert('Чит активирован! Фея заморожена на 10 секунд.');
+    alert('Фея заморожена на 10 секунд.');
     closeModals();
   } else {
-    alert('Неверный код! Загляни в свежий пост Threads.');
+    alert('Неверный код! Загляни в последние посты на Threads или ВК.');
   }
 }
 
