@@ -1,9 +1,10 @@
 // =============================================================================
-// ФИЗИКА, КОЛЛИЗИИ И СОСТОЯНИЯ
+// ФИЗИКА, РАЗГРОМ ГИПЕР-КОНФЕТОЙ И ТРИГГЕРЫ (ИСПРАВЛЕНА ОШИБКА FAIRY)
 // =============================================================================
 window.Physics = {
   update(state) {
-    // Анимация открывания рта и времени феи
+    if (state.isPaused) return;
+
     state.head.timer += 0.038;
     state.head.mouthOpen = (Math.sin(state.head.timer) + 1) / 2;
     state.fairy.time += 0.06;
@@ -17,8 +18,13 @@ window.Physics = {
     if (state.head.hitTimer > 0) state.head.hitTimer--;
     if (state.head.smugTimer > 0) state.head.smugTimer--;
     if (state.fairy.hitFlash > 0) state.fairy.hitFlash--;
+    if (state.fairy.speechTimer > 0) state.fairy.speechTimer--;
 
-    // Расчет множителей скорости феи
+    // Сброс комбо через 2.5 сек
+    if (state.combo > 0 && now - state.lastHitTime > 2500) {
+      state.combo = 0;
+    }
+
     const isFrozen = now < state.fairyFrozenUntil;
     const isChiliEnraged = now < state.fairy.enragedUntil;
     const isTapAngry = now < state.fairy.tapAngryUntil;
@@ -30,10 +36,9 @@ window.Physics = {
 
     if (isChiliEnraged) speedMult *= 2.2;
     if (isTapAngry) speedMult *= 1.20;
-    if (isStoneSlow) speedMult *= 0.75; // Ощутимый стан -25%
-    if (isMegaSlow) speedMult *= 0.50;  // Мега-стан -50%
+    if (isStoneSlow) speedMult *= 0.75;
+    if (isMegaSlow) speedMult *= 0.50;
 
-    // Поведение феи
     if (isFrozen) {
       state.fairy.state = 'FROZEN';
     } else if (state.fairy.state === 'EATING') {
@@ -43,6 +48,7 @@ window.Physics = {
       state.fairy.state = (isChiliEnraged || isTapAngry) ? 'ENRAGED' : 'FLYING';
 
       state.fairy.x += state.fairy.dir * state.fairy.baseSpeed * speedMult;
+      // ЗДЕСЬ БЫЛА ОШИБКА — ТЕПЕРЬ СТРОГО state.fairy.time:
       state.fairy.y = state.fairy.baseY + Math.sin(state.fairy.time * 2.3) * 35 + Math.cos(state.fairy.time * 0.8) * 15;
 
       const minX = state.PLAY_LEFT + 45;
@@ -57,30 +63,44 @@ window.Physics = {
       }
     }
 
-    // Обработка снарядов
+    // Снаряды
     for (let i = state.bullets.length - 1; i >= 0; i--) {
       let b = state.bullets[i];
       b.vy += 0.38 * b.type.weight;
       b.x += b.vx;
       b.y += b.vy;
 
-      // 1. КОЛЛИЗИЯ С ФЕЕЙ: КАМЕНЬ БЬЕТ ДАЖЕ ЕСЛИ ОНА ЕСТ!
+      // 1. КОЛЛИЗИЯ С ФЕЕЙ
       const isStone = b.type.special === 'heavy';
+      const isHyper = b.type.special === 'hyper';
       const canHitFairy = (state.fairy.state !== 'FROZEN') && 
                           (b.type.special !== 'ghost') && 
-                          (state.fairy.state !== 'EATING' || isStone);
+                          (state.fairy.state !== 'EATING' || isStone || isHyper);
 
       if (canHitFairy) {
         if (Math.hypot(b.x - state.fairy.x, b.y - state.fairy.y) < b.radius + state.fairy.radius) {
           state.bullets.splice(i, 1);
 
-          // Попадание камнем
-          if (isStone) {
-            state.fairy.state = 'FLYING'; // Сбиваем жевание, если ела
-            state.fairy.stoneSlowUntil = Date.now() + 8000;
-            state.fairy.hitFlash = 15; // Эффект вспышки стана
-            state.fairy.stoneHits++;
+          if (isHyper) {
+            state.fairy.state = 'FLYING';
+            state.fairy.stoneSlowUntil = Date.now() + 10000;
+            state.fairy.hitFlash = 25;
+            state.triggerFairySpeech('hit');
+            state.spawnFloatingText(state.fairy.x, state.fairy.y - 20, 'ГИПЕР-УДАР!', '#ffcc00');
+            state.spawnDebris(state.fairy.x, state.fairy.y);
+            AudioEngine.sfx.hit();
+            continue;
+          }
 
+          if (isStone) {
+            state.fairy.state = 'FLYING';
+            state.fairy.stoneSlowUntil = Date.now() + 8000;
+            state.fairy.hitFlash = 15;
+            state.fairy.stoneHits++;
+            state.stats.stoneHitsTotal++;
+            Game.checkAchievements();
+
+            state.triggerFairySpeech('hit');
             state.spawnFloatingText(state.fairy.x, state.fairy.y - 15, 'СТАН! -25%', '#00ffcc');
 
             if (state.fairy.stoneHits >= 3) {
@@ -95,7 +115,6 @@ window.Physics = {
             continue;
           }
 
-          // Попадание чили
           if (b.type.special === 'chili') {
             state.fairy.enragedUntil = Date.now() + 6000;
             state.fairy.state = 'ENRAGED';
@@ -103,9 +122,9 @@ window.Physics = {
             continue;
           }
 
-          // Обычная конфета
           state.fairy.state = 'EATING';
           state.fairy.eatTimer = 85;
+          state.triggerFairySpeech('eat');
           AudioEngine.sfx.eat();
           continue;
         }
@@ -116,28 +135,76 @@ window.Physics = {
         let hit = false;
         const R = state.head.radius;
 
-        state.teeth.forEach(t => {
+        let targetTeeth = [];
+        state.teeth.forEach((t, idx) => {
           if (t.hp <= 0) return;
           const tx = state.head.x + (t.rx * R);
           const ty = state.head.y + (t.ry * R);
+          const dist = Math.hypot(b.x - tx, b.y - ty);
 
-          if (Math.hypot(b.x - tx, b.y - ty) < b.radius + (R * 0.14)) {
-            t.hp -= b.type.damage;
-            hit = true;
-            if (t.hp <= 0) {
-              state.score += 250;
-              document.getElementById('score-val').innerText = state.score;
-              state.spawnFloatingText(tx, ty, '+250', '#ffffff');
-              AudioEngine.sfx.breakTooth();
-              state.spawnDebris(tx, ty);
-            } else {
-              AudioEngine.sfx.hit();
-            }
+          if (dist < b.radius + (R * 0.16)) {
+            targetTeeth.push({ tooth: t, dist, tx, ty, idx });
           }
         });
 
-        if (hit) {
+        if (targetTeeth.length > 0) {
+          hit = true;
           state.bullets.splice(i, 1);
+
+          // ГИПЕР-КОНФЕТА СНОСИТ 3 ЗУБА
+          if (isHyper) {
+            const aliveTeeth = state.teeth.filter(t => t.hp > 0).slice(0, 3);
+            let brokenCount = 0;
+
+            aliveTeeth.forEach(t => {
+              t.hp = 0;
+              brokenCount++;
+              const tx = state.head.x + (t.rx * R);
+              const ty = state.head.y + (t.ry * R);
+              state.spawnDebris(tx, ty);
+            });
+
+            state.screenShake = 25;
+            state.head.hitTimer = 22;
+            state.score += 1000;
+            document.getElementById('score-val').innerText = state.score;
+            state.spawnFloatingText(state.head.x, state.head.y, 'ТРОЙНОЙ РАЗГРОМ! +1000', '#ffcc00');
+
+            state.stats.teethBrokenTotal += brokenCount;
+            if (brokenCount >= 3) {
+              Game.unlockAchievement('hyper_strike');
+            }
+            Game.checkAchievements();
+            AudioEngine.sfx.breakTooth();
+            state.checkWinCondition();
+            continue;
+          }
+
+          // ОБЫЧНЫЙ СНАРЯД
+          targetTeeth.sort((a, b) => a.dist - b.dist);
+          const hitObj = targetTeeth[0];
+          hitObj.tooth.hp -= b.type.damage;
+
+          if (hitObj.tooth.hp <= 0) {
+            state.combo++;
+            state.lastHitTime = Date.now();
+            state.stats.teethBrokenTotal++;
+            Game.checkAchievements();
+
+            const comboMult = Math.max(1, state.combo);
+            const pointsEarned = 250 * comboMult;
+            state.score += pointsEarned;
+            document.getElementById('score-val').innerText = state.score;
+
+            const comboText = state.combo > 1 ? `x${state.combo} КОМБО! +${pointsEarned}` : `+${pointsEarned}`;
+            state.spawnFloatingText(hitObj.tx, hitObj.ty, comboText, state.combo > 1 ? '#ffcc00' : '#ffffff');
+
+            AudioEngine.sfx.breakTooth();
+            state.spawnDebris(hitObj.tx, hitObj.ty);
+          } else {
+            AudioEngine.sfx.hit();
+          }
+
           state.head.hitTimer = 16;
           state.screenShake = 16;
           state.checkWinCondition();
@@ -145,9 +212,11 @@ window.Physics = {
         }
       }
 
-      // 3. ПРОМАХ -> ВОССТАНОВЛЕНИЕ ЗУБА
+      // 3. ПРОМАХ
       if (b.y > state.H + 50 || b.x < -50 || b.x > state.W + 50) {
         state.bullets.splice(i, 1);
+        state.combo = 0;
+        state.triggerFairySpeech('miss');
         state.growBackTooth();
       }
     }
@@ -163,11 +232,11 @@ window.Physics = {
     // Осколки
     for (let i = state.particles.length - 1; i >= 0; i--) {
       let p = state.particles[i];
-      p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.alpha -= 0.03;
+      p.x += p.vx; p.y += p.vy; p.vy += p.gravity !== undefined ? p.gravity : 0.3; p.alpha -= p.fade !== undefined ? p.fade : 0.03;
       if (p.alpha <= 0) state.particles.splice(i, 1);
     }
 
-    // Тексты
+    // Плавающие тексты
     for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
       let ft = state.floatingTexts[i];
       ft.y -= 1.2;

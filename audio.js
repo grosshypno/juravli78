@@ -1,5 +1,5 @@
 // =============================================================================
-// АУДИОДВИЖОК: СИНТЕЗАТОР И MP3
+// АУДИОДВИЖОК: ПАУЗА МУЗЫКИ И ЗВУКИ ГИПЕР-КОНФЕТЫ
 // =============================================================================
 window.AudioEngine = {
   ctx: null,
@@ -20,6 +20,18 @@ window.AudioEngine = {
     if (this.bgm && !this.musicStarted && !this.isMuted) {
       this.bgm.volume = 0.35;
       this.bgm.play().then(() => { this.musicStarted = true; }).catch(() => {});
+    }
+  },
+
+  pauseMusic() {
+    if (this.bgm && !this.bgm.paused) {
+      this.bgm.pause();
+    }
+  },
+
+  resumeMusic() {
+    if (this.bgm && !this.isMuted && this.musicStarted) {
+      this.bgm.play().catch(() => {});
     }
   },
 
@@ -98,6 +110,22 @@ window.AudioEngine = {
     regrow() {
       [261, 329, 392, 523].forEach((f, i) => {
         setTimeout(() => AudioEngine.playTone(f, 'sine', 0.2, 0.25), i * 70);
+      });
+    },
+    fairyTaunt() {
+      AudioEngine.playTone(800, 'square', 0.05, 0.2);
+      setTimeout(() => AudioEngine.playTone(1200, 'square', 0.08, 0.2), 60);
+      setTimeout(() => AudioEngine.playTone(950, 'sawtooth', 0.09, 0.2), 140);
+    },
+    achievement() {
+      [523, 659, 783, 1046].forEach((f, i) => {
+        setTimeout(() => AudioEngine.playTone(f, 'triangle', 0.18, 0.3), i * 80);
+      });
+    },
+    hyperMerge() {
+      // Магический звон слияния
+      [440, 554, 659, 880, 1108].forEach((f, i) => {
+        setTimeout(() => AudioEngine.playTone(f, 'sine', 0.25, 0.3), i * 60);
       });
     }
   }

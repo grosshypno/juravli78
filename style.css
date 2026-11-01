@@ -270,3 +270,31 @@ canvas {
 .candy-guide-desc b {
   color: #00ffcc;
 }
+
+/* ВСПЛЫВАЮЩИЙ БАННЕР АЧИВОК */
+#achievement-toast {
+  display: none;
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 10px) + 52px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #180e2a;
+  border: 2px solid #00ffcc;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 30px;
+  z-index: 150;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  pointer-events: none;
+}
+
+@keyframes toastAnim {
+  0% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+  25% { transform: translate(-50%, 0) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -25px); }
+}

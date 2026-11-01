@@ -1,5 +1,5 @@
 // =============================================================================
-// РЕНДЕРИНГ (CANVAS)
+// РЕНДЕРИНГ: ЧЕРНЫЙ ЖИРНЫЙ ТЕКСТ ФЕИ (20px), ГИПЕР-КОНФЕТА И ФОНТАН АЧИВОК
 // =============================================================================
 window.Renderer = {
   render(ctx, state) {
@@ -11,12 +11,12 @@ window.Renderer = {
 
     const R = state.head.radius;
 
-    // 1. ТЫКВА (ГОЛОВА)
+    // 1. ТЫКВА
     ctx.save();
     ctx.translate(state.head.x, state.head.y);
 
     let frameIdx = 0;
-    if (state.head.hitTimer > 0) frameIdx = 2;
+    if (state.head.hitTimer > 0) frameIdx = 2; // Кадр боли!
     else if (state.head.mouthOpen > 0.35) frameIdx = 3;
     else if (state.head.mouthOpen > 0.12) frameIdx = 1;
     else frameIdx = 0;
@@ -29,7 +29,7 @@ window.Renderer = {
       ctx.drawImage(state.sprites.head, frameIdx * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh);
     }
 
-    // 2. ЗУБЫ (СТРОГО ПО КОНФИГУ)
+    // 2. ЗУБЫ
     if (frameIdx === 3) {
       state.teeth.forEach(t => {
         if (t.hp <= 0) return;
@@ -52,13 +52,12 @@ window.Renderer = {
     }
     ctx.restore();
 
-    // 3. ФЕЯ (3D ЭФФЕКТ + ВИЗУАЛЬНЫЙ СТАН)
+    // 3. ФЕЯ И ЧЕРНЫЙ ЖИРНЫЙ БАББЛ (20px)
     ctx.save();
     ctx.translate(state.fairy.x, state.fairy.y);
     const breathe3D = 1 + Math.sin(state.fairy.time * 2.6) * 0.06;
     ctx.scale(breathe3D, breathe3D);
 
-    // Свечение стана
     const now = Date.now();
     const isStunned = now < state.fairy.stoneSlowUntil || now < state.fairy.megaSlowUntil;
     if (isStunned || state.fairy.hitFlash > 0) {
@@ -82,14 +81,43 @@ window.Renderer = {
       const fSize = state.fairy.radius * 2.6;
       ctx.drawImage(state.sprites.fairy, fairyFrame * fw, 0, fw, fh, -fSize/2, -fSize/2, fSize, fSize);
     }
-    ctx.shadowBlur = 0; // Сброс свечения
+    ctx.shadowBlur = 0;
 
-    // Звездочки стана над феей
     if (isStunned) {
-      ctx.font = '16px sans-serif';
+      ctx.font = '18px sans-serif';
       ctx.textAlign = 'center';
       const starAngle = state.fairy.time * 4;
       ctx.fillText('💫', Math.cos(starAngle) * 22, -26 + Math.sin(starAngle) * 5);
+    }
+
+    // БАББЛ РЕПЛИКИ: В 2 РАЗА БОЛЬШЕ, ЖИРНЫЙ, ЧЕРНЫЙ ТЕКСТ!
+    if (state.fairy.speechTimer > 0 && state.fairy.speechText) {
+      ctx.save();
+      ctx.font = '900 20px -apple-system, BlinkMacSystemFont, sans-serif';
+      const textW = ctx.measureText(state.fairy.speechText).width;
+      const bubbleH = 34;
+
+      // Белое облачко с толстой черной обводкой
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-textW/2 - 12, -64, textW + 24, bubbleH, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      // Хвостик
+      ctx.beginPath();
+      ctx.moveTo(-6, -30); ctx.lineTo(0, -20); ctx.lineTo(6, -30);
+      ctx.fill();
+      ctx.stroke();
+
+      // ЧЕРНЫЙ ЖИРНЫЙ ТЕКСТ
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(state.fairy.speechText, 0, -47);
+      ctx.restore();
     }
 
     ctx.restore();
@@ -116,13 +144,24 @@ window.Renderer = {
       ctx.restore();
     });
 
-    // 6. ОСКОЛКИ
+    // 6. ОСКОЛКИ И ЧАСТИЦЫ КУБКОВ/ЗВЕЗД
     state.particles.forEach(p => {
-      ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
-      ctx.fillRect(p.x, p.y, p.size, p.size);
+      if (p.char) {
+        // Эмодзи кубков и звезд
+        ctx.save();
+        ctx.font = `${p.size || 20}px sans-serif`;
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.textAlign = 'center';
+        ctx.fillText(p.char, p.x, p.y);
+        ctx.restore();
+      } else {
+        // Обычные пиксели
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      }
     });
 
-    // 7. ТЕКСТЫ (ОЧКИ/СТАНЫ)
+    // 7. ПЛАВАЮЩИЕ ТЕКСТЫ
     state.floatingTexts.forEach(ft => {
       ctx.save();
       ctx.font = 'bold 16px sans-serif';
@@ -133,7 +172,19 @@ window.Renderer = {
       ctx.restore();
     });
 
-    // 8. РОГАТКА И ПРИЦЕЛ
+    // 8. ИНДИКАТОР КОМБО
+    if (state.combo > 1) {
+      ctx.save();
+      ctx.font = '900 24px sans-serif';
+      ctx.fillStyle = '#ffcc00';
+      ctx.shadowColor = '#ff5500';
+      ctx.shadowBlur = 12;
+      ctx.textAlign = 'center';
+      ctx.fillText(`🔥 COMBO x${state.combo}!`, state.W / 2, state.head.y + state.head.radius + 35);
+      ctx.restore();
+    }
+
+    // 9. РОГАТКА
     const sx = state.slingshot.x, sy = state.slingshot.y;
 
     ctx.strokeStyle = '#5a3018';
@@ -155,7 +206,7 @@ window.Renderer = {
       const power = Math.min(dist, 160) * 0.20 * curType.speedMult;
       const angle = Math.atan2(dy, dx);
 
-      ctx.strokeStyle = '#ff0055';
+      ctx.strokeStyle = curType.id === 4 ? '#ffcc00' : '#ff0055';
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.moveTo(sx - 18, sy - 15);
@@ -169,7 +220,6 @@ window.Renderer = {
       this.drawCandy(ctx, state, curType.id, 14);
       ctx.restore();
 
-      // Тонкая траектория
       let simX = sx, simY = sy;
       let simVx = Math.cos(angle) * power;
       let simVy = Math.sin(angle) * power;
@@ -180,7 +230,7 @@ window.Renderer = {
         simY += simVy;
         if (step % 2 === 0) {
           const fade = (1 - step / 14);
-          ctx.fillStyle = `rgba(0, 255, 204, ${fade * 0.8})`;
+          ctx.fillStyle = curType.id === 4 ? `rgba(255, 204, 0, ${fade})` : `rgba(0, 255, 204, ${fade * 0.8})`;
           ctx.beginPath();
           ctx.arc(simX, simY, 2.5, 0, Math.PI * 2);
           ctx.fill();
@@ -188,10 +238,44 @@ window.Renderer = {
       }
     }
 
+    // 10. ЭКРАН ПАУЗЫ
+    if (state.isPaused) {
+      ctx.fillStyle = 'rgba(5, 2, 10, 0.75)';
+      ctx.fillRect(0, 0, state.W, state.H);
+      ctx.font = 'bold 32px sans-serif';
+      ctx.fillStyle = '#00ffcc';
+      ctx.textAlign = 'center';
+      ctx.fillText('ПАУЗА ⏸', state.W / 2, state.H / 2);
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('Нажми ESC или кнопку ▶️ чтобы продолжить', state.W / 2, state.H / 2 + 35);
+    }
+
     ctx.restore();
   },
 
   drawCandy(ctx, state, id, radius) {
+    // ОСОБАЯ ОТРИСОВКА ГИПЕР-КОНФЕТЫ (ID: 4)
+    if (id === 4) {
+      ctx.save();
+      ctx.shadowColor = '#ffcc00';
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = '#fffb00';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ff0055';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⭐', 0, 0);
+      ctx.restore();
+      return;
+    }
+
     if (state.sprites.loaded.candies) {
       const cw = state.sprites.candies.width / 4;
       const ch = state.sprites.candies.height;

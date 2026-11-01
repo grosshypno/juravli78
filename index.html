@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Halloween: Выбей Зубы Эго!</title>
-  
-  <!-- Стили игры -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="game-wrap">
+  <!-- БАННЕР ПОЛУЧЕНИЯ АЧИВКИ -->
+  <div id="achievement-toast"></div>
+
   <!-- ЭКРАН ЗАГРУЗКИ -->
   <div id="loading-screen">
     <div class="loader-pumpkin">🎃</div>
@@ -23,15 +24,21 @@
   <audio id="snd-ai" src="ai.mp3" preload="auto"></audio>
   <audio id="snd-oi" src="oi.mp3" preload="auto"></audio>
 
-  <!-- ВЕРХНИЙ ИНТЕРФЕЙС (HUD) -->
+  <!-- ВЕРХНИЙ ИНТЕРФЕЙС -->
   <div id="hud">
     <div class="hud-pill">⏱ <span id="timer">0.0</span>с</div>
     <div class="hud-pill" style="color: #ffaa00;">⭐ <span id="score-val">0</span></div>
-    <div class="hud-btn-icon" onclick="toggleMusic()" id="music-btn">🎵</div>
+    
+    <div id="hud-btns" style="display:flex; gap:6px; pointer-events:auto;">
+      <div class="hud-btn-icon" onclick="openAchievementsModal()" id="trophy-btn" title="Достижения">🏆</div>
+      <div class="hud-btn-icon" onclick="togglePause()" id="pause-btn" title="Пауза (ESC)">⏸</div>
+      <div class="hud-btn-icon" onclick="toggleMusic()" id="music-btn" title="Звук">🎵</div>
+    </div>
+
     <div class="hud-pill">Зубов: <span id="teeth-count">10</span></div>
   </div>
 
-  <!-- ИНВЕНТАРЬ СНАРЯДОВ -->
+  <!-- ИНВЕНТАРЬ -->
   <div id="inventory-bar">
     <div class="inv-slot selected" id="slot-0" onclick="selectSlot(0)"><canvas id="sc-0" width="48" height="48"></canvas></div>
     <div class="inv-slot" id="slot-1" onclick="selectSlot(1)"><canvas id="sc-1" width="48" height="48"></canvas></div>
@@ -39,23 +46,22 @@
     <div class="inv-slot" id="slot-3" onclick="selectSlot(3)"><canvas id="sc-3" width="48" height="48"></canvas></div>
   </div>
 
-  <!-- КНОПКА ЧИТА -->
   <button id="hack-btn" onclick="openHackModal()">⚡ Тормознуть фею</button>
-
-  <!-- ОСНОВНОЙ ХОЛСТ ИГРЫ -->
   <canvas id="canvas"></canvas>
 
-  <!-- 1. МОДАЛКА ОБУЧЕНИЯ (ПРИ СТАРТЕ) -->
+  <!-- 1. МОДАЛКА ОБУЧЕНИЯ -->
   <div id="tutorial-modal" class="modal">
     <div class="modal-box" style="border-color: #ffaa00; box-shadow: 0 0 25px rgba(255,170,0,0.3);">
       <h2 style="color: #ffaa00;">КАК ИГРАТЬ?</h2>
       <p style="font-size: 13px; color: #ddd; margin: 0 0 10px 0; text-align: left;">
         🎃 <b>Цель:</b> Выбей все 10 зубов у гигантского злого эго, пока пасть открыта!<br>
         🏹 <b>Стрельба:</b> Собирай конфеты. Тяни рогатку вниз и отпускай.<br>
+        🌟 <b>Слияние 3 в 1:</b> 3 одинаковые конфеты объединяются в <b>Гипер-Конфету</b> (сносит 3 зуба разом)!<br>
+        🔥 <b>Комбо:</b> Выбивай зубы подряд быстрее 2.5 сек, чтобы умножать очки!<br>
         🎁 <b>Приз:</b> Делай скрин победного окна и пости в комент. Лучший получит приз.<br>
         ✖️ За промахи зубы восстанавливаются.<br>
-        🍬 Лишние пойманные конфеты превращаются в дополнительные очки.<br>
-        ⚠️ Не тапай по самой Фее (она разозлится)!<br>
+        🍬 Лишние конфеты превращаются в очки.<br>
+        ⚠️ Не тапай по самой Фее (она разозлится)! Пауза на <b>ESC</b>.
       </p>
 
       <div style="font-size: 12px; font-weight: 800; color: #ffaa00; text-align: left; margin: 6px 0;">АРСЕНАЛ СЛАДОСТЕЙ:</div>
@@ -67,7 +73,7 @@
 
       <div class="candy-guide-item">
         <canvas id="guide-c1" width="48" height="48"></canvas>
-        <div class="candy-guide-desc"><b>Челюстелом:</b> Сносит 2 урона! Фея замедляется на 25%. 3 попадания камнем = замедление на 50%!</div>
+        <div class="candy-guide-desc"><b>Челюстелом:</b> Сносит 2 урона! Фея замедляется на 25%. 3 попадания = мега-стан на 50%!</div>
       </div>
 
       <div class="candy-guide-item">
@@ -84,7 +90,29 @@
     </div>
   </div>
 
-  <!-- 2. МОДАЛКА ВЗЛОМА (THREADS, ДЗЕН, ВК) -->
+  <!-- 2. МОДАЛКА ДОСТИЖЕНИЙ -->
+  <div id="achievements-modal" class="modal">
+    <div class="modal-box" style="border-color: #00ffcc; box-shadow: 0 0 25px rgba(0,255,204,0.3);">
+      <h2>🏆 ДОСТИЖЕНИЯ</h2>
+      <div id="achievements-list" style="margin: 12px 0; text-align: left; max-height: 60vh; overflow-y: auto;"></div>
+      <button class="btn btn-green" onclick="closeModals()">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+
+  <!-- 3. СЕКРЕТНАЯ МОДАЛКА 100% ЗАВЕРШЕНИЯ -->
+  <div id="all-completed-modal" class="modal">
+    <div class="modal-box" style="border-color: #ffcc00; box-shadow: 0 0 35px rgba(255,204,0,0.5);">
+      <h2 style="color: #ffcc00;">🎉 100% ПРОХОЖДЕНИЕ!</h2>
+      <p style="font-size: 14px; line-height: 1.5; text-align: left;">
+        Ты открыл <b>все 14 достижений</b> и провел в игре <b><span id="all-comp-time">0</span> минут</b>.<br><br>
+        🧠 И это время было проведено с <b>абсолютной пользой</b>: ты натренировал скорость реакции, фокус на цели и сломал паттерны сопротивления внутреннего Саботажника.
+      </p>
+      <a href="https://boosty.to/grosshypno" target="_blank" class="btn btn-boosty">🧡 Перейти в наше комьюнити Boosty</a>
+      <button class="btn btn-green" onclick="closeModals()">Я КРУТ!</button>
+    </div>
+  </div>
+
+  <!-- 4. ВЗЛОМ -->
   <div id="hack-modal" class="modal">
     <div class="modal-box">
       <h2>ЗАМОРОЗИТЬ ФЕЮ</h2>
@@ -96,13 +124,12 @@
     </div>
   </div>
 
-  <!-- 3. ФИНАЛ С ПРЯМОЙ ССЫЛКОЙ НА BOOSTY И РАЗБОРАМИ -->
+  <!-- 5. ФИНАЛ С BOOSTY -->
   <div id="win-modal" class="modal">
     <div class="modal-box" style="border-color: #ff0055; box-shadow: 0 0 30px rgba(255,0,85,0.4);">
       <h2 style="color: #ff0055;">ЗУБЫ ВЫБИТЫ!</h2>
       <p id="win-stats" style="font-size: 14px;"></p>
       
-      <!-- Кнопка Boosty -->
       <a href="https://boosty.to/grosshypno" target="_blank" class="btn btn-boosty">🧡 Подписаться на Boosty</a>
 
       <div id="diagnosis-box" style="background: rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; font-size: 12px; text-align: left; margin: 12px 0;"></div>
@@ -113,7 +140,6 @@
   </div>
 </div>
 
-<!-- ПОДКЛЮЧЕНИЕ МОДУЛЕЙ В СТРОГОМ ПОРЯДКЕ -->
 <script src="config.js"></script>
 <script src="audio.js"></script>
 <script src="physics.js"></script>
